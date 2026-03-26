@@ -37,7 +37,7 @@ export function filterNote(note: Note, mode: ResponseMode, fields?: string[]): P
     result.frontmatter = {} as NoteFrontmatter;
     for (const field of fields) {
       if (field in note.frontmatter) {
-        (result.frontmatter as Record<string, unknown>)[field] = note.frontmatter[field as keyof NoteFrontmatter];
+        (result.frontmatter as unknown as Record<string, unknown>)[field] = note.frontmatter[field as keyof NoteFrontmatter];
       }
     }
   } else {

@@ -223,14 +223,14 @@ describe('filterNote', () => {
   });
 });
 
-function createTestNote() {
+function createTestNote(): import('./vault.js').Note {
   return {
     path: '/test/Test-Note.md',
     frontmatter: {
       title: 'Test Note',
       date: '2026-03-27',
       tags: ['test'],
-      status: 'active',
+      status: 'active' as const,
       related: [],
     },
     content: 'Test content',

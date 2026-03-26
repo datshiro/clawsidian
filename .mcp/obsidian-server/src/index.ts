@@ -1,15 +1,20 @@
+#!/usr/bin/env node
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
+import path from 'path';
+import matter from 'gray-matter';
 import {
   createNote, readNote, updateNote, deleteNote,
   searchNotes, listNotes, moveNote, getBacklinks,
   getDailyNote, createDailyNote, readSecret, writeSecret,
+  filterNote,
 } from './vault.js';
 import { renderTemplate, type TemplateType } from './templates.js';
+import type { ResponseMode } from './vault.js';
 
 const server = new Server(
   { name: 'obsidian', version: '1.0.0' },
@@ -42,11 +47,22 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     },
     {
       name: 'read_note',
-      description: 'Read a note by title or file path.',
+      description: 'Read a note by title or path. Use mode param to control response verbosity.',
       inputSchema: {
         type: 'object',
         properties: {
           title_or_path: { type: 'string', description: 'Note title or absolute file path' },
+          mode: {
+            type: 'string',
+            enum: ['full', 'content', 'summary'],
+            default: 'full',
+            description: 'full=raw markdown, content=body only, summary=title/tags/date only',
+          },
+          fields: {
+            type: 'array',
+            items: { type: 'string', enum: ['title', 'date', 'tags', 'status', 'related', 'content'] },
+            description: 'Specific fields to return (combines with mode)',
+          },
         },
         required: ['title_or_path'],
       },
@@ -77,7 +93,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     },
     {
       name: 'search_notes',
-      description: 'Full-text search across vault. Excludes Secrets/ by default.',
+      description: 'Full-text search across vault. Excludes Secrets/ by default. Use mode/fields to reduce response size.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -85,19 +101,37 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           folder: { type: 'string', description: 'Limit search to folder' },
           tags: { type: 'array', items: { type: 'string' }, description: 'Filter by tags' },
           include_secrets: { type: 'boolean', default: false },
+          mode: {
+            type: 'string',
+            enum: ['full', 'content', 'summary'],
+            default: 'full',
+          },
+          fields: {
+            type: 'array',
+            items: { type: 'string', enum: ['title', 'date', 'tags', 'status', 'related', 'content'] },
+          },
         },
         required: ['query'],
       },
     },
     {
       name: 'list_notes',
-      description: 'List notes, optionally filtered by folder, tag, or status.',
+      description: 'List notes, optionally filtered by folder, tag, or status. Use mode/fields for lighter responses.',
       inputSchema: {
         type: 'object',
         properties: {
           folder: { type: 'string' },
           tag: { type: 'string' },
           status: { type: 'string', enum: ['active', 'archived', 'draft'] },
+          mode: {
+            type: 'string',
+            enum: ['full', 'content', 'summary'],
+            default: 'summary',
+          },
+          fields: {
+            type: 'array',
+            items: { type: 'string', enum: ['title', 'date', 'tags', 'status', 'related', 'content'] },
+          },
         },
       },
     },
@@ -195,18 +229,23 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             service: '',
           });
           // strip frontmatter from template — createNote adds its own
-          const parts = rendered.split('---');
-          body = parts.length >= 3 ? parts.slice(2).join('---').trim() : rendered;
+          body = matter(rendered).content.trim();
         }
         const filePath = await createNote(title, folder, body, tags);
         return { content: [{ type: 'text', text: `Created: ${filePath}` }] };
       }
 
       case 'read_note': {
-        const { title_or_path } = requireArgs<{ title_or_path: string }>(args, ['title_or_path'], 'read_note');
-        const note = await readNote(title_or_path);
-        return { content: [{ type: 'text', text: note.raw }] };
-      }
+  const { title_or_path, mode = 'full', fields } = (args ?? {}) as {
+    title_or_path: string;
+    mode?: ResponseMode;
+    fields?: string[];
+  };
+  const note = await readNote(title_or_path);
+  const filtered = filterNote(note, mode, fields);
+  const output = mode === 'full' ? note.raw : JSON.stringify(filtered, null, 2);
+  return { content: [{ type: 'text', text: output }] };
+}
 
       case 'update_note': {
         const { title_or_path, content, mode = 'overwrite' } = requireArgs<{
@@ -223,22 +262,24 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'search_notes': {
-        const { query, folder, tags, include_secrets = false } = requireArgs<{
-          query: string; folder?: string; tags?: string[]; include_secrets?: boolean;
-        }>(args, ['query'], 'search_notes');
-        const notes = await searchNotes(query, folder, tags, include_secrets);
-        const summary = notes.map(n => `- ${n.frontmatter.title} (${n.path})`).join('\n');
-        return { content: [{ type: 'text', text: summary || 'No notes found.' }] };
-      }
+  const { query, folder, tags, include_secrets = false, mode = 'full', fields } = (args ?? {}) as {
+    query: string; folder?: string; tags?: string[]; include_secrets?: boolean;
+    mode?: ResponseMode; fields?: string[];
+  };
+  const notes = await searchNotes(query, folder, tags, include_secrets);
+  const filtered = notes.map(n => filterNote(n, mode, fields));
+  return { content: [{ type: 'text', text: JSON.stringify(filtered, null, 2) }] };
+}
 
       case 'list_notes': {
-        const { folder, tag, status } = args as {
-          folder?: string; tag?: string; status?: string;
-        };
-        const notes = await listNotes(folder, tag, status);
-        const summary = notes.map(n => `- ${n.frontmatter.title} [${n.frontmatter.tags?.join(', ')}] (${n.frontmatter.status})`).join('\n');
-        return { content: [{ type: 'text', text: summary || 'No notes found.' }] };
-      }
+  const { folder, tag, status, mode = 'summary', fields } = (args ?? {}) as {
+    folder?: string; tag?: string; status?: string;
+    mode?: ResponseMode; fields?: string[];
+  };
+  const notes = await listNotes(folder, tag, status);
+  const filtered = notes.map(n => filterNote(n, mode, fields));
+  return { content: [{ type: 'text', text: JSON.stringify(filtered, null, 2) }] };
+}
 
       case 'move_note': {
         const { title_or_path, destination } = requireArgs<{ title_or_path: string; destination: string }>(
