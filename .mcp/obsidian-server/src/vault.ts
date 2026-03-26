@@ -1,4 +1,5 @@
 import fs from 'fs/promises';
+import { Dirent } from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
 
@@ -51,7 +52,7 @@ export async function createNote(
     related: [],
     ...extraFrontmatter,
   };
-  const fileContent = matter.stringify(content, frontmatter as Record<string, unknown>);
+  const fileContent = matter.stringify(content, frontmatter as unknown as Record<string, unknown>);
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   try {
     await fs.access(filePath);
@@ -90,7 +91,7 @@ export async function updateNote(
     mode === 'append'
       ? note.content.trimEnd() + '\n\n' + newContent
       : newContent;
-  const fileContent = matter.stringify(updatedContent, note.frontmatter as Record<string, unknown>);
+  const fileContent = matter.stringify(updatedContent, note.frontmatter as unknown as Record<string, unknown>);
   await fs.writeFile(note.path, fileContent, 'utf-8');
   return note.path;
 }
@@ -178,7 +179,7 @@ export async function createDailyNote(date?: string): Promise<string> {
   };
   const content = matter.stringify(
     '\n## Notes\n\n## Action Items\n- [ ] \n',
-    frontmatter as Record<string, unknown>
+    frontmatter as unknown as Record<string, unknown>
   );
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, content, 'utf-8');
@@ -226,7 +227,7 @@ async function walkDir(
   dir: string,
   callback: (filePath: string) => Promise<void>
 ): Promise<void> {
-  let entries: fs.Dirent[];
+  let entries: Dirent[];
   try {
     entries = await fs.readdir(dir, { withFileTypes: true });
   } catch {
