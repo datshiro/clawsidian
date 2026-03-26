@@ -164,15 +164,29 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
   ],
 }));
 
+function requireArgs<T extends Record<string, unknown>>(
+  args: unknown,
+  required: (keyof T)[],
+  toolName: string
+): T {
+  const a = args as T;
+  for (const key of required) {
+    if (a[key] === undefined || a[key] === null || a[key] === '') {
+      throw new Error(`Missing required argument "${String(key)}" for tool "${toolName}"`);
+    }
+  }
+  return a;
+}
+
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
 
   try {
     switch (name) {
       case 'create_note': {
-        const { title, folder, tags = [], content, template } = args as {
+        const { title, folder, tags = [], content, template } = requireArgs<{
           title: string; folder: string; tags?: string[]; content?: string; template?: TemplateType;
-        };
+        }>(args, ['title', 'folder'], 'create_note');
         let body = content ?? '';
         if (template) {
           const rendered = await renderTemplate(template, {
@@ -189,29 +203,29 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'read_note': {
-        const { title_or_path } = args as { title_or_path: string };
+        const { title_or_path } = requireArgs<{ title_or_path: string }>(args, ['title_or_path'], 'read_note');
         const note = await readNote(title_or_path);
         return { content: [{ type: 'text', text: note.raw }] };
       }
 
       case 'update_note': {
-        const { title_or_path, content, mode = 'overwrite' } = args as {
+        const { title_or_path, content, mode = 'overwrite' } = requireArgs<{
           title_or_path: string; content: string; mode?: 'overwrite' | 'append';
-        };
+        }>(args, ['title_or_path', 'content'], 'update_note');
         const filePath = await updateNote(title_or_path, content, mode);
         return { content: [{ type: 'text', text: `Updated: ${filePath}` }] };
       }
 
       case 'delete_note': {
-        const { title_or_path } = args as { title_or_path: string };
+        const { title_or_path } = requireArgs<{ title_or_path: string }>(args, ['title_or_path'], 'delete_note');
         const archivePath = await deleteNote(title_or_path);
         return { content: [{ type: 'text', text: `Moved to archive: ${archivePath}` }] };
       }
 
       case 'search_notes': {
-        const { query, folder, tags, include_secrets = false } = args as {
+        const { query, folder, tags, include_secrets = false } = requireArgs<{
           query: string; folder?: string; tags?: string[]; include_secrets?: boolean;
-        };
+        }>(args, ['query'], 'search_notes');
         const notes = await searchNotes(query, folder, tags, include_secrets);
         const summary = notes.map(n => `- ${n.frontmatter.title} (${n.path})`).join('\n');
         return { content: [{ type: 'text', text: summary || 'No notes found.' }] };
@@ -227,13 +241,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'move_note': {
-        const { title_or_path, destination } = args as { title_or_path: string; destination: string };
+        const { title_or_path, destination } = requireArgs<{ title_or_path: string; destination: string }>(
+          args, ['title_or_path', 'destination'], 'move_note'
+        );
         const newPath = await moveNote(title_or_path, destination);
         return { content: [{ type: 'text', text: `Moved to: ${newPath}` }] };
       }
 
       case 'get_backlinks': {
-        const { title } = args as { title: string };
+        const { title } = requireArgs<{ title: string }>(args, ['title'], 'get_backlinks');
         const backlinks = await getBacklinks(title);
         return {
           content: [{
@@ -256,13 +272,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'read_secret': {
-        const { title } = args as { title: string };
+        const { title } = requireArgs<{ title: string }>(args, ['title'], 'read_secret');
         const note = await readSecret(title);
         return { content: [{ type: 'text', text: note.raw }] };
       }
 
       case 'write_secret': {
-        const { title, content, service } = args as { title: string; content: string; service?: string };
+        const { title, content, service } = requireArgs<{ title: string; content: string; service?: string }>(
+          args, ['title', 'content'], 'write_secret'
+        );
         const filePath = await writeSecret(title, content, service);
         return { content: [{ type: 'text', text: `Secret saved: ${filePath}` }] };
       }
