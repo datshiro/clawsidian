@@ -28,7 +28,10 @@ function vaultPath(...parts: string[]): string {
 }
 
 function slugify(title: string): string {
-  return title.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-');
+  return title
+    .replace(/[^a-zA-Z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-{2,}/g, '-');
 }
 
 export async function createNote(
@@ -50,6 +53,12 @@ export async function createNote(
   };
   const fileContent = matter.stringify(content, frontmatter as Record<string, unknown>);
   await fs.mkdir(path.dirname(filePath), { recursive: true });
+  try {
+    await fs.access(filePath);
+    throw new Error(`Note already exists: ${filePath}. Use updateNote to modify it.`);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+  }
   await fs.writeFile(filePath, fileContent, 'utf-8');
   return filePath;
 }
@@ -58,6 +67,9 @@ export async function readNote(titleOrPath: string): Promise<Note> {
   const filePath = titleOrPath.endsWith('.md')
     ? titleOrPath
     : await findNoteByTitle(titleOrPath);
+  if (!filePath.startsWith(vaultRoot())) {
+    throw new Error(`Access denied: path is outside vault: ${filePath}`);
+  }
   const raw = await fs.readFile(filePath, 'utf-8');
   const parsed = matter(raw);
   return {
@@ -139,9 +151,8 @@ export async function moveNote(titleOrPath: string, destinationFolder: string): 
 
 export async function getBacklinks(title: string): Promise<string[]> {
   const allNotes = await getAllNotes(false);
-  const pattern = `[[${title}]]`;
   return allNotes
-    .filter(n => n.raw.includes(pattern))
+    .filter(n => n.raw.includes(`[[${title}]]`) || n.raw.includes(`[[${title}|`))
     .map(n => n.frontmatter.title ?? path.basename(n.path, '.md'));
 }
 
@@ -169,6 +180,7 @@ export async function createDailyNote(date?: string): Promise<string> {
     '\n## Notes\n\n## Action Items\n- [ ] \n',
     frontmatter as Record<string, unknown>
   );
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, content, 'utf-8');
   return filePath;
 }
@@ -214,22 +226,23 @@ async function walkDir(
   dir: string,
   callback: (filePath: string) => Promise<void>
 ): Promise<void> {
-  let entries: string[];
+  let entries: fs.Dirent[];
   try {
-    entries = await fs.readdir(dir);
+    entries = await fs.readdir(dir, { withFileTypes: true });
   } catch {
     return;
   }
-  for (const entry of entries) {
-    if (entry.startsWith('.')) continue;
-    const fullPath = path.join(dir, entry);
-    const stat = await fs.stat(fullPath);
-    if (stat.isDirectory()) {
-      await walkDir(fullPath, callback);
-    } else {
-      await callback(fullPath);
-    }
-  }
+  await Promise.all(
+    entries.map(async (entry) => {
+      if (entry.name.startsWith('.')) return;
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        await walkDir(fullPath, callback);
+      } else {
+        await callback(fullPath);
+      }
+    })
+  );
 }
 
 async function findNoteByTitle(title: string): Promise<string> {
@@ -252,7 +265,7 @@ async function findNoteInFolder(title: string, folder: string): Promise<string> 
     throw new Error(`Folder not found: ${folder}`);
   }
   const slug = slugify(title).toLowerCase();
-  const match = entries.find(e => e.toLowerCase().replace('.md', '') === slug);
+  const match = entries.find(e => e.toLowerCase().replace(/\.md$/, '') === slug);
   if (!match) throw new Error(`Note not found in ${folder}: ${title}`);
   return path.join(folderPath, match);
 }
