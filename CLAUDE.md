@@ -12,6 +12,7 @@
 | Archive/ | Completed or inactive notes (never delete directly) |
 | Templates/ | Note templates — do not modify without asking |
 | Secrets/ | API keys, credentials, configs, endpoints |
+| docs/ | Project plans, design specs — do not modify without asking |
 
 ## Rules
 
@@ -20,13 +21,13 @@
 3. Every note must have frontmatter: title, date, tags, status, related.
 4. `delete_note` moves to Archive/ — it does NOT permanently delete.
 5. `search_notes` excludes Secrets/ by default. Use `read_secret` / `write_secret` explicitly.
-6. Match template to content type: meeting → Projects/, research → Resources/, idea → Ideas/, secret → Secrets/.
+6. Match template to content type: meeting → Projects/, research → Resources/, idea → Ideas/, secret → Secrets/. Tasks/ uses freeform markdown — no template.
 
 ## Frontmatter Schema
 
 ```yaml
 ---
-title: Note Title
+title: Note Title   # should match the filename without the .md extension (e.g., file My-Note.md → title: My Note)
 date: YYYY-MM-DD
 tags: []
 status: active   # active | archived | draft
