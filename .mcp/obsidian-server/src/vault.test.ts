@@ -3,6 +3,7 @@ import {
   createNote, readNote, updateNote, deleteNote,
   searchNotes, listNotes, moveNote, getBacklinks,
   getDailyNote, createDailyNote, readSecret, writeSecret,
+  filterNote,
 } from './vault.js';
 import fs from 'fs/promises';
 import path from 'path';
@@ -179,3 +180,60 @@ describe('secrets', () => {
     await expect(readSecret('Missing Secret')).rejects.toThrow();
   });
 });
+
+describe('filterNote', () => {
+  it('returns full note in "full" mode', async () => {
+    const note = createTestNote();
+    const result = filterNote(note, 'full');
+    expect(result.content).toBeDefined();
+    expect(result.frontmatter).toBeDefined();
+  });
+
+  it('excludes frontmatter in "content" mode', async () => {
+    const note = createTestNote();
+    const result = filterNote(note, 'content');
+    expect(result.content).toBe('Test content');
+    expect(result.frontmatter).toBeUndefined();
+  });
+
+  it('returns only summary fields in "summary" mode', async () => {
+    const note = createTestNote();
+    const result = filterNote(note, 'summary');
+    expect(result.frontmatter?.title).toBe('Test Note');
+    expect(result.frontmatter?.tags).toEqual(['test']);
+    expect(result.content).toBeUndefined();
+  });
+
+  it('filters specific fields when fields param provided', async () => {
+    const note = createTestNote();
+    const result = filterNote(note, 'full', ['title', 'tags']);
+    expect(result.frontmatter?.title).toBe('Test Note');
+    expect(result.frontmatter?.tags).toEqual(['test']);
+    expect(result.frontmatter?.date).toBeUndefined();
+    expect(result.frontmatter?.status).toBeUndefined();
+    expect(result.content).toBeUndefined();
+  });
+
+  it('combines mode and fields - content mode with fields', async () => {
+    const note = createTestNote();
+    const result = filterNote(note, 'content', ['title']);
+    expect(result.content).toBe('Test content');
+    expect(result.frontmatter?.title).toBe('Test Note');
+    expect(result.frontmatter?.tags).toBeUndefined();
+  });
+});
+
+function createTestNote() {
+  return {
+    path: '/test/Test-Note.md',
+    frontmatter: {
+      title: 'Test Note',
+      date: '2026-03-27',
+      tags: ['test'],
+      status: 'active',
+      related: [],
+    },
+    content: 'Test content',
+    raw: 'raw content',
+  };
+}

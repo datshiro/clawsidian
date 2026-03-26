@@ -20,6 +20,46 @@ export interface Note {
   raw: string;
 }
 
+export type ResponseMode = 'full' | 'content' | 'summary';
+
+export interface FilterOptions {
+  mode: ResponseMode;
+  fields?: string[];
+}
+
+export function filterNote(note: Note, mode: ResponseMode, fields?: string[]): Partial<Note> {
+  const result: Partial<Note> = {};
+
+  if (fields && fields.length > 0) {
+    if (mode === 'content') {
+      result.content = note.content;
+    }
+    result.frontmatter = {} as NoteFrontmatter;
+    for (const field of fields) {
+      if (field in note.frontmatter) {
+        (result.frontmatter as Record<string, unknown>)[field] = note.frontmatter[field as keyof NoteFrontmatter];
+      }
+    }
+  } else {
+    if (mode === 'content' || mode === 'full') {
+      result.content = note.content;
+    }
+    if (mode === 'full') {
+      result.frontmatter = note.frontmatter;
+    } else if (mode === 'summary') {
+      const fm = note.frontmatter;
+      result.frontmatter = {
+        title: fm.title,
+        date: fm.date,
+        tags: fm.tags,
+        status: fm.status,
+      } as NoteFrontmatter;
+    }
+  }
+
+  return result;
+}
+
 function vaultRoot(): string {
   return process.env.VAULT_PATH ?? '/Users/lap16932/personal/obsidian';
 }
@@ -162,8 +202,9 @@ export async function getDailyNote(date?: string): Promise<Note | null> {
   const filePath = vaultPath('Inbox', `${dateStr}.md`);
   try {
     return await readNote(filePath);
-  } catch {
-    return null;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    throw err;
   }
 }
 
@@ -196,7 +237,15 @@ export async function writeSecret(
   content: string,
   service?: string
 ): Promise<string> {
-  return createNote(title, 'Secrets', content, ['secret'], service ? { service } : {});
+  try {
+    // If the secret already exists, update it
+    const existing = await findNoteInFolder(title, 'Secrets');
+    await updateNote(existing, content, 'overwrite');
+    return existing;
+  } catch {
+    // Note doesn't exist — create it
+    return createNote(title, 'Secrets', content, ['secret'], service ? { service } : {});
+  }
 }
 
 // ── Internal helpers ─────────────────────────────────────────────────────────
@@ -216,8 +265,8 @@ async function getAllNotes(includeSecrets: boolean): Promise<Note[]> {
         content: parsed.content,
         raw,
       });
-    } catch {
-      // skip unreadable files
+    } catch (err) {
+      console.error(`[obsidian-mcp] skipped unreadable note: ${filePath}`, err);
     }
   });
   return notes;
