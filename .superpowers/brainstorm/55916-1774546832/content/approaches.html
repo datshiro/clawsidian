@@ -1,0 +1,48 @@
+<h2>Token Optimization Approaches</h2>
+<p class="subtitle">Choose how much content to return from MCP tools</p>
+
+<div class="options">
+  <div class="option" data-choice="minimal" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Minimal Response Mode</h3>
+      <p>Return only content + frontmatter, not full raw markdown</p>
+      <p class="label">~60% token reduction</p>
+    </div>
+  </div>
+  <div class="option" data-choice="content-only" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Content-Only Mode</h3>
+      <p>Option to exclude frontmatter entirely - body text only</p>
+      <p class="label">~80% token reduction</p>
+    </div>
+  </div>
+  <div class="option" data-choice="selective" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Selective Fields</h3>
+      <p>Let caller specify which fields to return (title, content, tags, etc.)</p>
+      <p class="label">Most flexible but more complex</p>
+    </div>
+  </div>
+  <div class="option" data-choice="caching" onclick="toggleSelect(this)">
+    <div class="letter">D</div>
+    <div class="content">
+      <h3>Result Caching</h3>
+      <p>Cache recent reads to avoid re-fetching same notes</p>
+      <p class="label">Memory trade-off, risk of stale data</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Recommended: A + B + C</h3>
+  <p>Add a <code>mode</code> parameter to read_note, search_notes, and list_notes that lets callers choose:
+  </p>
+  <ul>
+    <li><strong>full</strong> (default): current behavior</li>
+    <li><strong>content</strong>: body only, no frontmatter</li>
+    <li><strong>summary</strong>: just title + tags</li>
+  </ul>
+</div>

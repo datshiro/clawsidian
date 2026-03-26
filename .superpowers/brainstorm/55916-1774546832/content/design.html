@@ -1,0 +1,34 @@
+<h2>Design Approval</h2>
+<p class="subtitle">Token Optimization for Obsidian MCP</p>
+
+<div class="section">
+  <h3>1. New Parameters</h3>
+  <p>Add to read_note, search_notes, list_notes:</p>
+  <ul>
+    <li><code>mode</code>: "full" | "content" | "summary" (default: "full")</li>
+    <li><code>fields</code>: string[] - which fields to return (title, content, tags, date, status, related)</li>
+  </ul>
+</div>
+
+<div class="section">
+  <h3>2. Mode Behavior</h3>
+  <ul>
+    <li><strong>full</strong> (default): Returns raw markdown with frontmatter (current behavior)</li>
+    <li><strong>content</strong>: Returns only the body content, no frontmatter</li>
+    <li><strong>summary</strong>: Returns just title, tags, date, status - no body content</li>
+  </ul>
+</div>
+
+<div class="section">
+  <h3>3. Fields Parameter</h3>
+  <p>Allows granular control - useful for list operations where you need titles but not content:</p>
+  <ul>
+    <li><code>fields: ["title", "tags"]</code> - lightweight for dropdowns/dashboards</li>
+    <li><code>fields: ["title", "content"]</code> - exclude frontmatter fields</li>
+  </ul>
+</div>
+
+<div class="section">
+  <h3>4. Backward Compatibility</h3>
+  <p>Default is "full" so existing callers work unchanged. Tools like create_note, update_note unaffected.</p>
+</div>

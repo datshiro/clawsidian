@@ -1,8 +1,7 @@
 {
   "mcpServers": {
     "obsidian": {
-      "command": "node",
-      "args": ["/Users/lap16932/personal/obsidian/.mcp/obsidian-server/dist/index.js"],
+      "command": "obsidian-mcp",
       "env": {
         "VAULT_PATH": "/Users/lap16932/personal/obsidian"
       }

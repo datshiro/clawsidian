@@ -1,0 +1,33 @@
+<h2>Implementation Scope</h2>
+<p class="subtitle">Which tools should get the token optimization?</p>
+
+<div class="options">
+  <div class="option" data-choice="read-only" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>read_note only</h3>
+      <p>Add mode + fields params to just read_note</p>
+      <p class="label">Lowest risk, quick win</p>
+    </div>
+  </div>
+  <div class="option" data-choice="read-search-list" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>read_note + search_notes + list_notes</h3>
+      <p>Add to all read operations - most common token savings</p>
+      <p class="label">Recommended</p>
+    </div>
+  </div>
+  <div class="option" data-choice="all-tools" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>All 11 tools</h3>
+      <p>Full coverage - includes create, update, delete, etc.</p>
+      <p class="label">Most comprehensive</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <p><strong>My recommendation: B</strong> — read_note, search_notes, and list_notes are the tools that return large amounts of content and get called most frequently. Adding optimization there captures 90% of the token savings with minimal complexity.</p>
+</div>
