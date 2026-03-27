@@ -1,0 +1,10 @@
+name: clawsidian
+version: 1.0.0
+description: Obsidian vault MCP server — gives AI tools structured read/write access to your notes
+contextFileName: GEMINI.md
+
+mcpServers:
+  obsidian:
+    command: obsidian-mcp
+    env:
+      VAULT_PATH: ${VAULT_PATH}

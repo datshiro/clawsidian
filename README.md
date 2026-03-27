@@ -1,8 +1,8 @@
 # Clawsidian
 
-> An Obsidian vault with an AI brain built in — Claude can read, write, and organize your notes through a local MCP server.
+> An Obsidian vault with an AI brain built in — Claude, Gemini, and other AI tools can read, write, and organize your notes through a local MCP server.
 
-This repository is both an **Obsidian vault** and an **AI-native knowledge base**. It ships with a Model Context Protocol (MCP) server that gives Claude direct, structured access to your notes — without any cloud sync, third-party API, or data leaving your machine.
+This repository is both an **Obsidian vault** and an **AI-native knowledge base**. It ships with a Model Context Protocol (MCP) server that gives AI tools direct, structured access to your notes — without any cloud sync, third-party API, or data leaving your machine.
 
 ---
 
@@ -28,10 +28,10 @@ clawsidian/
 ## How it works
 
 ```
-You ──── Claude ──── obsidian-mcp ──── your .md files
+You ──── AI tool ──── obsidian-mcp ──── your .md files
 ```
 
-Claude connects to the `obsidian-mcp` server via the [Model Context Protocol](https://modelcontextprotocol.io). The server exposes 11 tools — create, read, search, move, archive, link notes, manage daily journals, and store secrets. Claude uses these tools the same way it would call any function: with structured arguments, validated inputs, and safe file operations.
+Your AI tool connects to the `obsidian-mcp` server via the [Model Context Protocol](https://modelcontextprotocol.io). The server exposes 11 tools — create, read, search, move, archive, link notes, manage daily journals, and store secrets. The AI uses these tools the same way it would call any function: with structured arguments, validated inputs, and safe file operations.
 
 Your notes are plain `.md` files with YAML frontmatter. Everything is readable without Claude, editable in any text editor, and fully compatible with the Obsidian app.
 
@@ -43,7 +43,7 @@ Your notes are plain `.md` files with YAML frontmatter. Everything is readable w
 
 - [Node.js](https://nodejs.org) v18+
 - [Obsidian](https://obsidian.md) (optional — vault is plain markdown)
-- [Claude Code](https://claude.ai/code) or another MCP-compatible AI host
+- One of: [Claude Code](https://claude.ai/code), [Gemini CLI](https://github.com/google-gemini/gemini-cli), or [Opencode](https://opencode.ai)
 
 ### 1. Clone the vault
 
@@ -52,19 +52,39 @@ git clone https://github.com/datshiro/clawsidian.git
 cd clawsidian
 ```
 
-### 2. Install and link the MCP server
+### 2. Build and link the MCP server
 
 ```bash
 cd .mcp/obsidian-server
 npm install
+npm run build
 npm link
+cd ../..
 ```
 
-This builds the TypeScript and registers `obsidian-mcp` as a global command. You only need to do this once.
+This compiles the TypeScript and registers `obsidian-mcp` as a global command. Run once — no need to repeat after rebuilding.
 
-### 3. Configure your MCP host
+Verify:
 
-The `.mcp.json` in the vault root is already configured:
+```bash
+which obsidian-mcp   # should resolve to a global npm bin path
+```
+
+### 3. Connect your AI tool
+
+---
+
+#### Claude Code
+
+The `.mcp.json` in the repo root is pre-configured. Update `VAULT_PATH` to the absolute path where you cloned the repo:
+
+```bash
+sed -i '' "s|\"VAULT_PATH\": \".*\"|\"VAULT_PATH\": \"$(pwd)\"|" .mcp.json
+```
+
+Restart Claude Code. The `obsidian` MCP server appears automatically — no further setup needed.
+
+To use this vault from **any other project**, drop a `.mcp.json` there:
 
 ```json
 {
@@ -79,24 +99,59 @@ The `.mcp.json` in the vault root is already configured:
 }
 ```
 
-Update `VAULT_PATH` to match where you cloned the repo, then restart Claude Code. The `obsidian` server will appear automatically.
+---
 
-### 4. Use it in any other project
+#### Gemini CLI
 
-Since the server is installed globally, you can connect any project to this vault (or any other vault) by dropping a `.mcp.json` in that project's root:
+Install this repo as a Gemini extension using the `extension.yaml` at the repo root:
 
-```json
-{
-  "mcpServers": {
-    "obsidian": {
-      "command": "obsidian-mcp",
-      "env": {
-        "VAULT_PATH": "/path/to/any/vault"
-      }
-    }
-  }
-}
+```bash
+export VAULT_PATH=$(pwd)
+gemini extensions install $(pwd)
 ```
+
+The extension is registered as `clawsidian`. To make `VAULT_PATH` permanent, add it to your shell profile:
+
+```bash
+echo "export VAULT_PATH=$(pwd)" >> ~/.zshrc   # or ~/.bashrc
+```
+
+To uninstall:
+
+```bash
+gemini extensions uninstall clawsidian
+```
+
+---
+
+#### Opencode
+
+Add the MCP server to your Opencode config. Run from the repo root:
+
+```bash
+VAULT=$(pwd)
+OPENCODE_CONFIG="${HOME}/.config/opencode/config.json"
+mkdir -p "$(dirname "$OPENCODE_CONFIG")"
+[ -f "$OPENCODE_CONFIG" ] || echo '{}' > "$OPENCODE_CONFIG"
+
+node -e "
+const fs = require('fs');
+const cfg = JSON.parse(fs.readFileSync('$OPENCODE_CONFIG', 'utf8'));
+cfg.mcp = cfg.mcp || {};
+cfg.mcp.servers = cfg.mcp.servers || {};
+cfg.mcp.servers.obsidian = {
+  type: 'local',
+  command: ['obsidian-mcp'],
+  env: { VAULT_PATH: '$VAULT' }
+};
+fs.writeFileSync('$OPENCODE_CONFIG', JSON.stringify(cfg, null, 2));
+console.log('Done — obsidian server added to', '$OPENCODE_CONFIG');
+"
+```
+
+Restart Opencode. The `obsidian` server will be available in all sessions.
+
+---
 
 ---
 
@@ -166,7 +221,7 @@ The server lives at `.mcp/obsidian-server/`. Full documentation including all 11
 
 ---
 
-## Things you can ask Claude
+## Things you can ask your AI
 
 Once connected, try:
 
