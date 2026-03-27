@@ -236,11 +236,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'read_note': {
-  const { title_or_path, mode = 'full', fields } = (args ?? {}) as {
-    title_or_path: string;
-    mode?: ResponseMode;
-    fields?: string[];
-  };
+        const { title_or_path, mode = 'full', fields } = requireArgs<{
+          title_or_path: string; mode?: ResponseMode; fields?: string[];
+        }>(args, ['title_or_path'], 'read_note');
   const note = await readNote(title_or_path);
   const filtered = filterNote(note, mode, fields);
   const output = mode === 'full' ? note.raw : JSON.stringify(filtered, null, 2);

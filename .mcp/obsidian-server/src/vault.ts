@@ -49,10 +49,10 @@ export function filterNote(note: Note, mode: ResponseMode, fields?: string[]): P
     } else if (mode === 'summary') {
       const fm = note.frontmatter;
       result.frontmatter = {
-        title: fm.title,
-        date: fm.date,
-        tags: fm.tags,
-        status: fm.status,
+        title: fm.title ?? path.basename(note.path, '.md'),
+        date: fm.date ?? '',
+        tags: fm.tags ?? [],
+        status: fm.status ?? 'active',
       } as NoteFrontmatter;
     }
   }
