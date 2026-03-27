@@ -59,23 +59,26 @@ sed -i '' "s|\"VAULT_PATH\": \".*\"|\"VAULT_PATH\": \"$VAULT\"|" .mcp.json
 
 ### GeminiCLI
 
-Install this directory as a Gemini extension:
+Install directly from GitHub (requires git):
 
 ```bash
-gemini extensions install $(pwd)
+export VAULT_PATH=/absolute/path/to/your/vault
+gemini extensions install https://github.com/datshiro/clawsidian
 ```
 
-This reads `extension.yaml` at the repo root. After install, the `obsidian` MCP server is available in all Gemini sessions. To pass the correct vault path, set the environment variable before starting Gemini:
+Or from a local clone:
 
 ```bash
 export VAULT_PATH=$(pwd)
-gemini
+gemini extensions install $(pwd)
 ```
 
-Or add it permanently to your shell profile:
+This reads `gemini-extension.json` at the repo root. The `obsidian` MCP server and `GEMINI.md` context are loaded automatically in all Gemini sessions.
+
+To make `VAULT_PATH` permanent, add it to your shell profile:
 
 ```bash
-echo "export VAULT_PATH=$(pwd)" >> ~/.zshrc   # or ~/.bashrc
+echo "export VAULT_PATH=/absolute/path/to/your/vault" >> ~/.zshrc   # or ~/.bashrc
 ```
 
 To uninstall:
@@ -151,4 +154,4 @@ A successful response confirms the MCP connection is live.
 | `VAULT_PATH not set` error | Export `VAULT_PATH` in your shell or update the config |
 | Server connects but no notes found | Check `VAULT_PATH` points to the repo root (must contain `Inbox/`, `Projects/`, etc.) |
 | `dist/index.js` missing | Run `npm run build` from `.mcp/obsidian-server/` |
-| GeminiCLI extension not found | Ensure `extension.yaml` exists at repo root; re-run `gemini extensions install $(pwd)` |
+| GeminiCLI extension not found | Ensure `gemini-extension.json` exists at repo root; re-run `gemini extensions install $(pwd)` |

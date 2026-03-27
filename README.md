@@ -103,17 +103,24 @@ To use this vault from **any other project**, drop a `.mcp.json` there:
 
 #### Gemini CLI
 
-Install this repo as a Gemini extension using the `extension.yaml` at the repo root:
+Install directly from GitHub (requires git):
+
+```bash
+export VAULT_PATH=/absolute/path/to/your/vault
+gemini extensions install https://github.com/datshiro/clawsidian
+```
+
+Or from a local clone:
 
 ```bash
 export VAULT_PATH=$(pwd)
 gemini extensions install $(pwd)
 ```
 
-The extension is registered as `clawsidian`. To make `VAULT_PATH` permanent, add it to your shell profile:
+The extension is registered as `clawsidian` and `GEMINI.md` is loaded automatically as context. To make `VAULT_PATH` permanent, add it to your shell profile:
 
 ```bash
-echo "export VAULT_PATH=$(pwd)" >> ~/.zshrc   # or ~/.bashrc
+echo "export VAULT_PATH=/absolute/path/to/your/vault" >> ~/.zshrc   # or ~/.bashrc
 ```
 
 To uninstall:
