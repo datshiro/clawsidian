@@ -106,21 +106,43 @@ To use this vault from **any other project**, drop a `.mcp.json` there:
 Install directly from GitHub (requires git):
 
 ```bash
-export VAULT_PATH=/absolute/path/to/your/vault
 gemini extensions install https://github.com/datshiro/clawsidian
 ```
 
 Or from a local clone:
 
 ```bash
-export VAULT_PATH=$(pwd)
 gemini extensions install $(pwd)
 ```
 
-The extension is registered as `clawsidian` and `GEMINI.md` is loaded automatically as context. To make `VAULT_PATH` permanent, add it to your shell profile:
+The installer will prompt you for your vault path — no manual `export` needed:
+
+```
+? Vault Path: /Users/you/notes/clawsidian
+```
+
+The extension is registered as `clawsidian` and `GEMINI.md` is loaded automatically as context in every Gemini session.
+
+**Scope: personal vs project**
+
+The setting is stored globally (personal scope) by default, pointing to one vault for all sessions.
+
+To use a **different vault for a specific project**, create `.gemini/settings.json` in that project's root:
+
+```json
+{
+  "envs": {
+    "VAULT_PATH": "/path/to/project-specific-vault"
+  }
+}
+```
+
+Gemini CLI will pick this up automatically when you run `gemini` from that directory, overriding the global setting.
+
+To update your vault path at any time:
 
 ```bash
-echo "export VAULT_PATH=/absolute/path/to/your/vault" >> ~/.zshrc   # or ~/.bashrc
+gemini extensions config clawsidian
 ```
 
 To uninstall:
